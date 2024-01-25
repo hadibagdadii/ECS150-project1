@@ -6,11 +6,52 @@
 
 #define CMDLINE_MAX 512
 
+struct node {
+    char *data;
+    struct node *next;
+};
+
+struct linked_list {
+  struct node *head;
+  struct node *tail;
+};
+
+void linked_list_init(struct linked_list *list) {
+  list->head = NULL;
+  list->tail = NULL;
+}
+
+void linked_list_add(struct linked_list *list, char *data) {
+  struct node *new_node = malloc(sizeof(struct node));
+  new_node->data = data;
+  new_node->next = NULL;
+
+  if (list->head == NULL) {
+    list->head = new_node;
+    list->tail = new_node;
+  } else {
+    list->tail->next = new_node;
+    list->tail = new_node;
+  }
+}
+
+void linked_list_print(struct linked_list *list) {
+  struct node *current_node = list->head;
+  while (current_node != NULL) {
+    printf("%s ", current_node->data);
+    current_node = current_node->next;
+  }
+  printf("\n");
+}
+
 void parseCommandLine(char *input, char *command, char *args) {
     // Initialize variables
-    int i = 0, j = 0;
+    int i = 0, j = 0, k = 0;
+    struct linked_list flag_list;
+    linked_list_init(&flag_list);
+
     char cmd[CMDLINE_MAX] = {0};
-    char ar[CMDLINE_MAX] = {0};
+    // char args[CMDLINE_MAX] = {0};
 
     // Parse command
     while (input[i] != ' ' && input[i] != '\n' && input[i] != '\0') {
@@ -27,24 +68,36 @@ void parseCommandLine(char *input, char *command, char *args) {
         if (input[i] == ' ') {
             // Skip spaces
             i++;
-            j++;
-        } else {
-            // Add characters to args
+        } else if (input[i] == '-') {
+            // Add characters to args as a flag
+            char flag[CMDLINE_MAX] = {0};
             while (input[i] != ' ' && input[i] != '\n' && input[i] != '\0') {
-                ar[j] = input[i];
+                flag[k] = input[i];
                 i++;
                 j++;
             }
-            //strcat(args, " ");
-            ar[j] = ' ';
+            linked_list_add(&flag_list, flag);
+
+            // Clear the flag array for the next flag
+            memset(flag, '\0', CMDLINE_MAX);
+        } else {
+            // Add characters to args
+            while (input[i] != '\n' && input[i] != '\0') {
+                args[j] = input[i];
+                i++;
+                j++;
+            }
+            args[j] = ' ';  // Add space between arguments
+            j++;
         }
     }
 
     // Remove the trailing space from args
     if (j > 0) {
-        ar[j] = '\0';
+        args[j - 1] = '\0';
     }
 
+    linked_list_print(&flag_list);
     printf("%s\n", args);
 }
 
