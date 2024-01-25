@@ -74,7 +74,7 @@ void parseCommandLine(char *input, char *command, char *args) {
             while (input[i] != ' ' && input[i] != '\n' && input[i] != '\0') {
                 flag[k] = input[i];
                 i++;
-                j++;
+                k++;
             }
             linked_list_add(&flag_list, flag);
 
