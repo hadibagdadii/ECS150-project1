@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
 #include <dirent.h>
 #include <sys/types.h>
 
@@ -35,7 +39,6 @@ char** parseCommandLine(const char* input) {
     return tokens;
 }
 
-
 int getCommands(char *input) {
     // Tokenize the input to get the first word
     char** parsedArgs = parseCommandLine(input);
@@ -68,16 +71,15 @@ int getCommands(char *input) {
             free(parsedArgs[i]);
         }
         free(parsedArgs);
+        free(currDir);
         exit(EXIT_SUCCESS);
     }
     // Check if the first word is "pwd"
     else if (strcmp(parsedArgs[0], "pwd") == 0) {
         printf("%s\n", currDir);
     }
-
-
-    //Check if first word is sls
-    else if (strcmp(parsedArgs[0], "sls") == 0) {
+     //Check if first word is sls
+     else if (strcmp(parsedArgs[0], "sls") == 0) {
         DIR *dp;
         struct dirent *ep;
         FILE *fp; 
@@ -144,48 +146,129 @@ int getCommands(char *input) {
             free(parsedArgs[i]);
         }
         free(parsedArgs);
+        free(currDir);
         return 0;
     }
-    
+
     // Clean up memory
     for (int i = 0; parsedArgs[i] != NULL; i++) {
         free(parsedArgs[i]);
     }
     free(parsedArgs);
+    free(currDir);
 
     // Return 0 to indicate successful execution of a built-in command
     return 1;
 }
 
+void removeGreaterThan(char input[]) {
+    char *greaterThanPos = strchr(input, '>');
+    
+    if (greaterThanPos != NULL) {
+        // Found '>', remove it and all following characters
+        *greaterThanPos = '\0';
+    }
+}
+
+void output(char* input) {
+    char* output_file = NULL;
+    char* saveptr;
+    char** parsedArgs = parseCommandLine(input);
+
+    // Check if output redirection symbol is present in the command
+    if (strstr(input, ">") != NULL) {
+        // Extract the output file and command without the output redirection
+        output_file = strtok_r(input, ">", &saveptr);
+        output_file = strtok_r(NULL, ">", &saveptr);
+        if (output_file != NULL) {
+            // Trim leading and trailing whitespaces from the output file name
+            char* end = output_file + strlen(output_file) - 1;
+            while (end > output_file && (*end == ' ' || *end == '\t')) {
+                end--;
+            }
+            *(end + 1) = '\0';
+
+            // Trim trailing whitespaces from the command
+            char* command_end = parsedArgs[0] + strlen(parsedArgs[0]) - 1;
+            while (command_end > parsedArgs[0] && (*command_end == ' ' || *command_end == '\t')) {
+                command_end--;
+            }
+            *(command_end + 1) = '\0';
+
+            // Check if the output file already exists
+            struct stat file_stat;
+            if (stat(output_file, &file_stat) == -1) {
+                // Redirect stdout to the specified output file
+                int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                if (fd == -1) {
+                    perror("Error opening output file");
+                    exit(EXIT_FAILURE);
+                }
+                dup2(fd, STDOUT_FILENO);
+                close(fd);
+                
+                removeGreaterThan(input);
+                parsedArgs = parseCommandLine(input);
+
+                // Execute the command using execvp
+                if (execvp(parsedArgs[0], parsedArgs) == -1) {
+                    perror("execvp");
+                    exit(EXIT_FAILURE);
+                }
+
+                // Reset stdout back to the terminal
+                dup2(STDOUT_FILENO, STDOUT_FILENO);
+            } else {
+                // Redirect stdout to the specified output file
+                int fd = open(output_file, O_WRONLY | O_APPEND, 0666);
+                if (fd == -1) {
+                    perror("Error opening output file");
+                    exit(EXIT_FAILURE);
+                }
+                dup2(fd, STDOUT_FILENO);
+                close(fd);
+                
+                removeGreaterThan(input);
+                parsedArgs = parseCommandLine(input);
+
+                // Execute the command using execvp
+                if (execvp(parsedArgs[0], parsedArgs) == -1) {
+                    perror("execvp");
+                    exit(EXIT_FAILURE);
+                }
+
+                // Reset stdout back to the terminal
+                dup2(STDOUT_FILENO, STDOUT_FILENO);
+            }
+        }
+    } else {
+        parsedArgs = parseCommandLine(input);
+        // No output redirection, execute the command using execvp
+        if (execvp(parsedArgs[0], parsedArgs) == -1) {
+            perror("execvp");
+            exit(EXIT_FAILURE);
+        }
+    }
+    for (int i = 0; parsedArgs[i] != NULL; i++) {
+        free(parsedArgs[i]);
+    }
+    free(parsedArgs);
+}
 
 int main() {
     // Initialize variables
     char input[CMDLINE_MAX];
-    //char currDir[CMDLINE_MAX];
-
-    // Initialize currentDir once at the start of the program
-    // if (getcwd(currDir, sizeof(currDir)) == NULL) {
-    //     perror("Error Accessing Current Directory");
-    //     return EXIT_FAILURE;
-    // }
 
     while (1)
     {
-        // Print out sshell$ to let user know the shell is ready for input
+        // Print out sshell$ to let the user know the shell is ready for input
         printf("sshell$ ");
         fflush(stdout);
 
         // Get input and check if there was an error collecting input
         if (fgets(input, CMDLINE_MAX, stdin) == NULL) {
             perror("Command Input Error");
-            exit(1);
-        }
-
-        char** parsedArgs = parseCommandLine(input);
-
-        // Print the parsed arguments
-        for (int i = 0; parsedArgs[i] != NULL; i++) {
-            printf("Argument %d: %s\n", i + 1, parsedArgs[i]);
+            exit(EXIT_FAILURE);
         }
 
         // Check if the inputted command is either exit, pwd, or cd
@@ -201,20 +284,13 @@ int main() {
             exit(EXIT_FAILURE);
         } else if (pid == 0) {
             // Child process
-            execvp(parsedArgs[0], parsedArgs);
-            perror("execvp");
-            exit(EXIT_FAILURE);
+            output(input);
         } else {
             // Parent process
             int status;
             waitpid(pid, &status, 0);
-
-            // Clean up memory
-            for (int i = 0; parsedArgs[i] != NULL; i++) {
-                free(parsedArgs[i]);
-            }
-            free(parsedArgs);
         }
-        //return 0;
     }
+
+    return 0;
 }
