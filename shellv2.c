@@ -34,9 +34,23 @@ char** parseCommandLine(const char* input) {
 }
 
 
-int getCommands(char *input, char *currDir) {
+int getCommands(char *input) {
     // Tokenize the input to get the first word
     char** parsedArgs = parseCommandLine(input);
+
+    // Allocate memory for currDir
+    char *currDir = (char *)malloc(CMDLINE_MAX);
+    if (currDir == NULL) {
+        perror("Error Allocating Memory");
+        return EXIT_FAILURE;
+    }
+
+    // Initialize currentDir once at the start of the program
+    if (getcwd(currDir, CMDLINE_MAX) == NULL) {
+        perror("Error Accessing Current Directory");
+        free(currDir);
+        return EXIT_FAILURE;
+    }
     
     // Check if the parsedArgs array is not empty
     if (parsedArgs[0] == NULL) {
@@ -68,10 +82,6 @@ int getCommands(char *input, char *currDir) {
         // If there is a ".." after cd, go back one directory to the parent of the current
         else if (strcmp(parsedArgs[1], "..") == 0) {
             chdir("..");
-            if (getcwd(currDir, sizeof(currDir)) == NULL) {
-                perror("Error Accessing Current Directory");
-                exit(EXIT_FAILURE);
-            }
             printf("Changed to parent directory\n");
         }
         // If there is an argument after cd, go to that argument
@@ -80,7 +90,7 @@ int getCommands(char *input, char *currDir) {
                 printf("Changed to given directory\n");
             }
             else {
-                perror("cd");
+                perror("ERROR: Unable to change directory");
             }
         }
     }
@@ -108,13 +118,13 @@ int getCommands(char *input, char *currDir) {
 int main() {
     // Initialize variables
     char input[CMDLINE_MAX];
-    char currDir[CMDLINE_MAX];
+    //char currDir[CMDLINE_MAX];
 
     // Initialize currentDir once at the start of the program
-    if (getcwd(currDir, sizeof(currDir)) == NULL) {
-        perror("Error Accessing Current Directory");
-        return EXIT_FAILURE;
-    }
+    // if (getcwd(currDir, sizeof(currDir)) == NULL) {
+    //     perror("Error Accessing Current Directory");
+    //     return EXIT_FAILURE;
+    // }
 
     while (1)
     {
@@ -136,7 +146,7 @@ int main() {
         }
 
         // Check if the inputted command is either exit, pwd, or cd
-        if (getCommands(input, currDir)) {
+        if (getCommands(input)) {
             continue; 
         }
 
