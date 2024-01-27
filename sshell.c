@@ -299,15 +299,15 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
-        // //Print command line if stdin is not provided by terminal 
-        // if (!isatty(STDIN_FILENO)) {
-        //     printf("%s", input);
-        //     fflush(stdout);
-        // }
+        //Print command line if stdin is not provided by terminal 
+        if (!isatty(STDIN_FILENO)) {
+            printf("%s", input);
+            fflush(stdout);
+        }
 
-        // // Remove newline
-        // char *nl = strchr(input, '\n');
-        // if (nl) *nl = '\0';
+        // Remove newline
+        char *nl = strchr(input, '\n');
+        if (nl) *nl = '\0';
 
         // Check if the inputted command is either exit, pwd, or cd
         if (getCommands(input)) {
