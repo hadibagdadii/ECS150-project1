@@ -71,7 +71,7 @@ int getCommands(char *input) {
 
     // Check if the first word is "exit"
     if (strcmp(parsedArgs[0], "exit") == 0) {
-        printf("Bye!\n");
+        printf("Bye...\n");
         printf("+ completed 'exit' [0]\n");
         // Clean up memory
         for (int i = 0; parsedArgs[i] != NULL; i++) {
@@ -271,9 +271,10 @@ void removeNewline(char* input) {
 
 void printCompletionStatus(const char* input, int status) {
     if (WIFEXITED(status)) {
-        if (WEXITSTATUS(status) == 0) {
-            printf("+ completed '%s' [%d]\n", input, WEXITSTATUS(status));
-        } //else if (/*check if input has a '>' and if there is no content after the '>'*/) {
+        printf("+ completed '%s' [%d]\n", input, WEXITSTATUS(status));
+        // if (WEXITSTATUS(status) == 0) {
+        //     printf("+ completed '%s' [%d]\n", input, WEXITSTATUS(status));
+        // } //else if (/*check if input has a '>' and if there is no content after the '>'*/) {
         //     printf("Error: no output file\n");
         // } else if (/*check if input has a '>' and if there is no content after the '>'*/) {
         //     printf("Error: no output file\n");
@@ -297,6 +298,16 @@ int main() {
             perror("Command Input Error");
             exit(EXIT_FAILURE);
         }
+
+        //Print command line if stdin is not provided by terminal 
+        if (!isatty(STDIN_FILENO)) {
+            printf("%s", input);
+            fflush(stdout);
+        }
+
+        // Remove newline
+        char *nl = strchr(input, '\n');
+        if (nl) *nl = '\0';
 
         // Check if the inputted command is either exit, pwd, or cd
         if (getCommands(input)) {
