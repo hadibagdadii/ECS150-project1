@@ -18,7 +18,7 @@ char** parseCommandLine(const char* input) {
 
     // Exit if inputCopy is NULL, strdup failure
     if (inputCopy == NULL) {
-        perror("strdup");
+        //perror("strdup");
         exit(EXIT_FAILURE);
     }
 
@@ -58,13 +58,13 @@ int getCommands(char *input) {
 
     // Check if memory was correctly allocated
     if (currDir == NULL) {
-        perror("Error Allocating Memory");
+        //perror("Error Allocating Memory");
         return EXIT_FAILURE;
     }
 
     // Initialize currDir to the current directory
     if (getcwd(currDir, CMDLINE_MAX) == NULL) {
-        perror("Error Accessing Current Directory");
+        //perror("Error Accessing Current Directory");
         free(currDir);
         return EXIT_FAILURE;
     }
@@ -116,7 +116,7 @@ int getCommands(char *input) {
         }
         //If Directory cannot be opened     
         else {
-            perror ("Error: cannot open directory\n");
+            //perror ("Error: cannot open directory\n");
             printf("+ completed 'sls' [1]\n");
         }
     }
@@ -136,11 +136,11 @@ int getCommands(char *input) {
         // If there is an argument after cd, go to that argument
         else {
             if (chdir(parsedArgs[1]) == 0) {
-                printf("Changed to given directory\n");
+                //printf("Changed to given directory\n");
                 printf("+ completed 'cd %s' [0]\n", parsedArgs[1]);
             }
             else {
-                perror("ERROR: Unable to change directory");
+                //perror("ERROR: Unable to change directory");
             }
         }
     }
@@ -207,7 +207,7 @@ void output(char* input) {
                 // Redirect stdout to the specified output file
                 int fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
                 if (fd == -1) {
-                    perror("Error opening output file");
+                    //perror("Error opening output file");
                     exit(EXIT_FAILURE);
                 }
                 dup2(fd, STDOUT_FILENO);
@@ -218,7 +218,7 @@ void output(char* input) {
 
                 // Execute the command using execvp
                 if (execvp(parsedArgs[0], parsedArgs) == -1) {
-                    perror("execvp");
+                    //perror("execvp");
                     exit(EXIT_FAILURE);
                 }
 
@@ -228,7 +228,7 @@ void output(char* input) {
                 // Redirect stdout to the specified output file
                 int fd = open(output_file, O_WRONLY | O_APPEND, 0666);
                 if (fd == -1) {
-                    perror("Error opening output file");
+                    //perror("Error opening output file");
                     exit(EXIT_FAILURE);
                 }
                 dup2(fd, STDOUT_FILENO);
@@ -239,7 +239,7 @@ void output(char* input) {
 
                 // Execute the command using execvp
                 if (execvp(parsedArgs[0], parsedArgs) == -1) {
-                    perror("execvp");
+                    //perror("execvp");
                     exit(EXIT_FAILURE);
                 }
 
@@ -251,7 +251,7 @@ void output(char* input) {
         parsedArgs = parseCommandLine(input);
         // No output redirection, execute the command using execvp
         if (execvp(parsedArgs[0], parsedArgs) == -1) {
-            perror("execvp");
+            //perror("execvp");
             exit(EXIT_FAILURE);
         }
     }
