@@ -9,63 +9,70 @@
 #include <dirent.h>
 #include <sys/types.h>
 
-#define CMDLINE_MAX 1000  // Adjust this based on your maximum expected input size
+#define CMDLINE_MAX 512  // The maximum length of a command line never exceeds 512 characters.
 
 char** parseCommandLine(const char* input) {
-    char* inputCopy = strdup(input);  // Create a copy of the input string
+    // Create a copy of the input string which we use to tokenize
+    char* inputCopy = strdup(input);
+    int count = 0;
+
+    // Exit if inputCopy is NULL, strdup failure
     if (inputCopy == NULL) {
         perror("strdup");
         exit(EXIT_FAILURE);
     }
 
+    // Tokenize based on space and newline
     char** tokens = NULL;
-    char* token = strtok(inputCopy, " \n");  // Tokenize based on space and newline
+    char* token = strtok(inputCopy, " \n");
 
-    int count = 0;
     while (token != NULL) {
-        tokens = realloc(tokens, sizeof(char*) * (count + 1));
-        tokens[count] = malloc(strlen(token) + 1);
-        strcpy(tokens[count], token);
-
-        token = strtok(NULL, " \n");
+        tokens = realloc(tokens, sizeof(char*) * (count + 1)); // Resize the tokens array to accommodate the new token
+        tokens[count] = malloc(strlen(token) + 1); // Allocate memory for the current token.
+        strcpy(tokens[count], token); // Copy the current token into the allocated memory.
+        token = strtok(NULL, " \n"); // Get next token
         count++;
     }
 
+    // Last token needs to be NULL for execvp
     tokens = realloc(tokens, sizeof(char*) * (count + 1));
-    tokens[count] = NULL;  // Null-terminate the array
+    tokens[count] = NULL;
 
-    free(inputCopy);  // Free the copied string
-
+    // Free the copied string and return tokens
+    free(inputCopy);
     return tokens;
 }
 
 int getCommands(char *input) {
-    // Tokenize the input to get the first word
+    // Tokenize the input
     char** parsedArgs = parseCommandLine(input);
 
-    // Allocate memory for currDir
-    char *currDir = (char *)malloc(CMDLINE_MAX);
-    if (currDir == NULL) {
-        perror("Error Allocating Memory");
-        return EXIT_FAILURE;
-    }
-
-    // Initialize currentDir once at the start of the program
-    if (getcwd(currDir, CMDLINE_MAX) == NULL) {
-        perror("Error Accessing Current Directory");
-        free(currDir);
-        return EXIT_FAILURE;
-    }
-    
-    // Check if the parsedArgs array is not empty
+    // Return if parsedArgs is empty to continue running shell
     if (parsedArgs[0] == NULL) {
         free(parsedArgs);
         return 0;
     }
 
+    // Allocate memory for currDir
+    char *currDir = (char *)malloc(CMDLINE_MAX);
+
+    // Check if memory was correctly allocated
+    if (currDir == NULL) {
+        perror("Error Allocating Memory");
+        return EXIT_FAILURE;
+    }
+
+    // Initialize currDir to the current directory
+    if (getcwd(currDir, CMDLINE_MAX) == NULL) {
+        perror("Error Accessing Current Directory");
+        free(currDir);
+        return EXIT_FAILURE;
+    }
+
     // Check if the first word is "exit"
     if (strcmp(parsedArgs[0], "exit") == 0) {
-        printf("Bye!\n");
+        printf("Bye..\n");
+        printf("+ completed 'exit' [0]\n");
         // Clean up memory
         for (int i = 0; parsedArgs[i] != NULL; i++) {
             free(parsedArgs[i]);
@@ -77,66 +84,66 @@ int getCommands(char *input) {
     // Check if the first word is "pwd"
     else if (strcmp(parsedArgs[0], "pwd") == 0) {
         printf("%s\n", currDir);
+        printf("+ completed 'pwd' [0]\n");
     }
-     //Check if first word is sls
-     else if (strcmp(parsedArgs[0], "sls") == 0) {
+    //Check if first word is sls
+    else if (strcmp(parsedArgs[0], "sls") == 0) {
         DIR *dp;
         struct dirent *ep;
         FILE *fp; 
         int size = 0;
 
         dp = opendir ("./");
-        if (dp != NULL)
-        {
-                //Reads entire directory 
+        if (dp != NULL) {
+                //Reads entire directory
                 while ((ep = readdir(dp)) != NULL)
-                { 
-                        //Prints the file name and the file size with the expection of the "." and ".." root directories
-                        if ( strcmp(ep->d_name, ".") != 0 && strcmp(ep->d_name, "..") != 0)
-                        { 
-                             fp = fopen(ep->d_name, "r"); 
-                             fseek(fp, 0, 2);
-                             size = ftell(fp);
-                             printf("%s (%d bytes)\n", ep->d_name, size);
+                {
+                    //Prints the file name and the file size with the expection of the "." and ".." root directories
+                    if ( strcmp(ep->d_name, ".") != 0 && strcmp(ep->d_name, "..") != 0)
+                    {
+                        fp = fopen(ep->d_name, "r");
+                        fseek(fp, 0, 2);
+                        size = ftell(fp);
+                        printf("%s (%d bytes)\n", ep->d_name, size);
 
-                        }
-                       
+                    }
                 }
-                 
                 (void) closedir (dp);
                 printf("+ completed 'sls' [0]\n");
-         }
-    //If Directory cannot be opened     
-    else
-    { 
-        perror ("Error: cannot open directory\n");
-        printf("+ completed 'sls' [1]\n");
+        }
+
+        //If Directory cannot be opened     
+        else {
+            perror ("Error: cannot open directory\n");
+            printf("+ completed 'sls' [1]\n");
+        }
     }
-         
-    } 
+
     // Check if the first word is "cd"
     else if (strcmp(parsedArgs[0], "cd") == 0) {
         // If there are no arguments after cd, change to the root directory
         if (parsedArgs[1] == NULL) {
             chdir("/");
-            printf("Changed to root directory\n");
+            printf("+ completed 'cd' [0]\n");
         }
         // If there is a ".." after cd, go back one directory to the parent of the current
         else if (strcmp(parsedArgs[1], "..") == 0) {
             chdir("..");
-            printf("Changed to parent directory\n");
+            printf("+ completed 'cd %s' [0]\n", parsedArgs[1]);
         }
         // If there is an argument after cd, go to that argument
         else {
             if (chdir(parsedArgs[1]) == 0) {
                 printf("Changed to given directory\n");
+                printf("+ completed 'cd %s' [0]\n", parsedArgs[1]);
             }
             else {
                 perror("ERROR: Unable to change directory");
             }
         }
     }
-    // If none of the above conditions match, return 1
+
+    // If none of the above conditions match, return 1 for failure
     else {
         // Clean up memory
         for (int i = 0; parsedArgs[i] != NULL; i++) {
@@ -144,7 +151,7 @@ int getCommands(char *input) {
         }
         free(parsedArgs);
         free(currDir);
-        return 0;
+        return 1;
     }
 
     // Clean up memory
@@ -154,23 +161,22 @@ int getCommands(char *input) {
     free(parsedArgs);
     free(currDir);
 
-    // Return 0 to indicate successful execution of a built-in command
-    return 1;
+    // Return 0 to indicate successful execution
+    return 0;
 }
 
 void removeGreaterThan(char input[]) {
+    // Find '>', remove it if exists and all following characters
     char *greaterThanPos = strchr(input, '>');
-    
     if (greaterThanPos != NULL) {
-        // Found '>', remove it and all following characters
         *greaterThanPos = '\0';
     }
 }
 
 void output(char* input) {
-    char* output_file = NULL;
-    char* saveptr;
-    char** parsedArgs = parseCommandLine(input);
+    char* output_file = NULL; // Declaration of a pointer to store the output file name
+    char* saveptr; // Pointer for tokenization
+    char** parsedArgs = parseCommandLine(input); // Tokenize the input
 
     // Check if output redirection symbol is present in the command
     if (strstr(input, ">") != NULL) {
