@@ -95,11 +95,8 @@ int getCommands(char *input) {
                         if ( strcmp(ep->d_name, ".") != 0 && strcmp(ep->d_name, "..") != 0)
                         { 
                              fp = fopen(ep->d_name, "r"); 
-
                              fseek(fp, 0, 2);
-
                              size = ftell(fp);
-
                              printf("%s (%d bytes)\n", ep->d_name, size);
 
                         }
@@ -266,7 +263,11 @@ void printCompletionStatus(const char* input, int status) {
     if (WIFEXITED(status)) {
         if (WEXITSTATUS(status) == 0) {
             printf("+ completed '%s' [%d]\n", input, WEXITSTATUS(status));
-        } else if ()
+        } //else if (/*check if input has a '>' and if there is no content after the '>'*/) {
+        //     printf("Error: no output file\n");
+        // } else if (/*check if input has a '>' and if there is no content after the '>'*/) {
+        //     printf("Error: no output file\n");
+        // }
     }
 }
 
